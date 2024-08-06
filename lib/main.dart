@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nazwa_apki/theme.dart';
 
 import 'screens/main.dart';
 
@@ -14,10 +15,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'MUZZA',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: themeData,
       home: const HomeScreen(),
     );
   }
