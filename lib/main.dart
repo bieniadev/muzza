@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nazwa_apki/providers/current_screen.dart';
 import 'package:nazwa_apki/theme.dart';
 
-import 'screens/main.dart';
-
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) => runApp(const ProviderScope(child: App())));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class App extends ConsumerWidget {
+  const App({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'MUZZA',
       theme: themeData,
-      home: const HomeScreen(),
+      home: ref.watch(currentScreenProvider),
     );
   }
 }
