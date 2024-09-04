@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nazwa_apki/providers/current_playlist.dart';
 import 'package:nazwa_apki/providers/current_screen.dart';
 import 'package:nazwa_apki/providers/player_names.dart';
 import 'package:nazwa_apki/screens/song_select.dart';
+import 'package:nazwa_apki/services/connections.dart';
 
 class SetNicknamesScreen extends ConsumerStatefulWidget {
   const SetNicknamesScreen({super.key, required this.playersAmount, required this.songsPerPlayer});
@@ -32,13 +34,23 @@ class _SetNicknamesScreenState extends ConsumerState<SetNicknamesScreen> {
     super.dispose();
   }
 
-  startGame() {
+  startSelectingSongs() async {
     List<String> playerNames = [];
     for (var controller in _controllers) {
       playerNames.add(controller.text);
     }
     ref.read(userNicknamesProvider.notifier).state = playerNames;
+
+    try {
+      final Map<String, dynamic> response = await ApiServices().createPlaylist(widget.playersAmount, widget.songsPerPlayer);
+      ref.read(currentPlaylistProvider.notifier).state = response;
+    } catch (err) {
+      throw Exception(err);
+    }
+
+    // ignore: use_build_context_synchronously
     Navigator.of(context).pop();
+    // ignore: use_build_context_synchronously
     Navigator.of(context).pop();
     ref.read(currentScreenProvider.notifier).state = SongSelectScreen(songsPerPlayer: widget.songsPerPlayer);
   }
@@ -80,7 +92,7 @@ class _SetNicknamesScreenState extends ConsumerState<SetNicknamesScreen> {
           ),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: startGame,
+            onTap: startSelectingSongs,
             child: Container(
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: Theme.of(context).colorScheme.onSecondary),
               padding: const EdgeInsets.all(16),

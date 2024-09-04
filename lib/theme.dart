@@ -12,4 +12,7 @@ ThemeData themeData = ThemeData(
     onPrimary: const Color.fromARGB(255, 212, 104, 147),
     onSecondary: const Color.fromARGB(255, 219, 81, 136),
   ),
+  textSelectionTheme: const TextSelectionThemeData(
+    selectionHandleColor: Color.fromARGB(255, 239, 118, 167),
+  ),
 );
