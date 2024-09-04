@@ -71,6 +71,7 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
   selectSong(String title, String videoId, String userName, String playlistId) async {
     try {
       final response = await ApiServices().addSongToPlaylist(title, videoId, userName, playlistId);
+      print('RESPONSE: $response');
       //to do: zrob dobrze ok?
     } catch (err) {
       throw Exception(err);
@@ -85,7 +86,7 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
         _currentPlayerSelectingIndex++;
       });
       if (_currentPlayerSelectingIndex >= _playerNicknames.length) {
-        return; // nie wiem czy potrzebny chcek na break petli
+        return; // not sure if 'return' required
       }
     }
   }
