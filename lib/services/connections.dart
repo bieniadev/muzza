@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart';
+import 'package:nazwa_apki/models/song.dart';
 
 class ApiServices {
   //api link
@@ -44,17 +45,32 @@ class ApiServices {
   }
 
   // add song to playlist in db
-  Future<dynamic> addSongToPlaylist(String title, String videoId, String userName, String playlistId) async {
+  Future<dynamic> addSongToPlaylist(Song song, String playlistId) async {
     Map<String, dynamic> request = {
-      'title': title,
-      'videoId': videoId,
-      'userName': userName,
+      'title': song.title,
+      'videoId': song.videoId,
+      'userName': song.userName,
     };
     final body = jsonEncode(request);
     final uri = Uri.parse('$baseUrl/api/playlists/$playlistId/add-song');
     final requestHeaders = {'Content-Type': 'application/json'};
 
     Response response = await patch(uri, headers: requestHeaders, body: body);
+
+    if (response.statusCode == 200) {
+      final dynamic result = jsonDecode(response.body);
+      return result;
+    } else {
+      throw Exception(response.reasonPhrase);
+    }
+  }
+
+  // start game
+  Future<dynamic> startGame(String playlistId) async {
+    final uri = Uri.parse('$baseUrl/api/playlists/$playlistId/songs');
+    final requestHeaders = {'Content-Type': 'application/json'};
+
+    Response response = await get(uri, headers: requestHeaders);
 
     if (response.statusCode == 200) {
       final dynamic result = jsonDecode(response.body);

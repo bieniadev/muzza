@@ -1,10 +1,11 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nazwa_apki/models/playlist.dart';
+import 'package:nazwa_apki/models/song.dart';
 import 'package:nazwa_apki/providers/current_playlist.dart';
 import 'package:nazwa_apki/providers/current_screen.dart';
 import 'package:nazwa_apki/providers/player_names.dart';
+import 'package:nazwa_apki/providers/randomized_playlist.dart';
 import 'package:nazwa_apki/screens/running_game.dart';
 import 'package:nazwa_apki/services/connections.dart';
 
@@ -20,14 +21,17 @@ class SongSelectScreen extends ConsumerStatefulWidget {
 class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
   List<String> _playerNicknames = [];
   List<dynamic> _songsQuery = [];
+  Playlist? _playlist;
+  bool _isLoading = false;
   final TextEditingController _controller = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _playerNicknames = ref.read(userNicknamesProvider);
   }
 
-  pickSong(index, String title, String videoId, String userName, String playlistId) {
+  pickSong(int index, Song song, String playlistId) {
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -50,7 +54,7 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
                   child: const Text('OK'),
                   onPressed: () {
                     Navigator.of(context).pop();
-                    selectSong(title, videoId, userName, playlistId);
+                    selectSong(song, playlistId);
                   },
                 ),
               ],
@@ -58,27 +62,44 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
   }
 
   searchSong(query) async {
-    final response = await ApiServices().searchSongQuery(query);
-    log('RESPONSE: $response');
-    setState(() {
-      _songsQuery = response;
-    });
+    setState(() => _isLoading = !_isLoading);
+    try {
+      final response = await ApiServices().searchSongQuery(query);
+      setState(() => _songsQuery = response);
+    } catch (err) {
+      setState(() => _isLoading = !_isLoading);
+      throw Exception(err);
+    }
+    setState(() => _isLoading = !_isLoading);
   }
 
   int _currentPlayerSelectingIndex = 0;
   int _songsAmountSelected = 0;
 
-  selectSong(String title, String videoId, String userName, String playlistId) async {
+  selectSong(Song song, String playlistId) async {
+    _controller.clear();
+    setState(() => _songsQuery.clear());
+    setState(() => _isLoading = !_isLoading);
+
     try {
-      final response = await ApiServices().addSongToPlaylist(title, videoId, userName, playlistId);
-      print('RESPONSE: $response');
-      //to do: zrob dobrze ok?
+      final response = await ApiServices().addSongToPlaylist(song, playlistId);
+
+      List<Song> songs = (response['songs'] as List<dynamic>).map((song) => Song(title: song['title'], videoId: song['videoId'], userName: song['userName'])).toList();
+      _playlist = Playlist(
+        id: response['_id'],
+        playersCount: response['playersCount'],
+        songsPerPlayer: response['songsPerPlayer'],
+        songs: songs,
+        createdAt: response['createdAt'],
+        updatedAt: response['updatedAt'],
+      );
+      ref.read(currentPlaylistProvider.notifier).state = _playlist;
     } catch (err) {
+      setState(() => _isLoading = !_isLoading);
       throw Exception(err);
     }
-    setState(() {
-      _songsAmountSelected++;
-    });
+
+    setState(() => _songsAmountSelected++);
 
     if (_songsAmountSelected >= widget.songsPerPlayer) {
       setState(() {
@@ -89,9 +110,18 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
         return; // not sure if 'return' required
       }
     }
+    setState(() => _isLoading = !_isLoading);
   }
 
-  startGame() {
+  startGame() async {
+    try {
+      final response = await ApiServices().startGame(_playlist!.id);
+      List<Song> songs = (response as List<dynamic>).map((song) => Song(title: song['title'], videoId: song['videoId'], userName: song['userName'])).toList();
+      ref.read(randomizedPlaylistProvider.notifier).state = songs;
+    } catch (err) {
+      throw Exception(err);
+    }
+
     ref.read(currentScreenProvider.notifier).state = const RunningGame();
   }
 
@@ -110,24 +140,6 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
                     const SizedBox(height: 10),
                     Text('Teraz wybiera: ${_playerNicknames[_currentPlayerSelectingIndex]}', style: const TextStyle(fontSize: 24)),
                     const SizedBox(height: 10),
-                    _songsQuery.isNotEmpty
-                        ? Expanded(
-                            child: ListView.builder(
-                              itemCount: 5,
-                              itemBuilder: (context, index) {
-                                return InkWell(
-                                  onTap: () => pickSong(index, _songsQuery[index]['title'], _songsQuery[index]['id'], _playerNicknames[_currentPlayerSelectingIndex], ref.read(currentPlaylistProvider)['_id']),
-                                  child: Column(
-                                    children: [
-                                      Image.network(_songsQuery[index]['thumbnail']),
-                                      Text(_songsQuery[index]['title']),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        : const SizedBox(),
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: TextField(
@@ -143,6 +155,36 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
                         ),
                       ),
                     ),
+                    _songsQuery.isNotEmpty
+                        ? Expanded(
+                            child: ListView.builder(
+                              itemCount: 5,
+                              itemBuilder: (context, index) {
+                                Song songQuery = Song(
+                                  title: _songsQuery[index]['title'],
+                                  userName: _playerNicknames[_currentPlayerSelectingIndex],
+                                  videoId: _songsQuery[index]['id'],
+                                );
+                                String currentPlaylistId = ref.read(currentPlaylistProvider)!.id;
+
+                                return InkWell(
+                                  onTap: () => pickSong(
+                                    index,
+                                    songQuery,
+                                    currentPlaylistId,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Image.network(_songsQuery[index]['thumbnail']),
+                                      Text(_songsQuery[index]['title']),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : const SizedBox(),
+                    _isLoading ? const CircularProgressIndicator(color: Colors.red) : const SizedBox(),
                   ],
                 )
               : Column(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nazwa_apki/models/playlist.dart';
 import 'package:nazwa_apki/providers/current_playlist.dart';
 import 'package:nazwa_apki/providers/current_screen.dart';
 import 'package:nazwa_apki/providers/player_names.dart';
@@ -43,7 +44,14 @@ class _SetNicknamesScreenState extends ConsumerState<SetNicknamesScreen> {
 
     try {
       final Map<String, dynamic> response = await ApiServices().createPlaylist(widget.playersAmount, widget.songsPerPlayer);
-      ref.read(currentPlaylistProvider.notifier).state = response;
+      ref.read(currentPlaylistProvider.notifier).state = Playlist(
+        id: response['_id'],
+        playersCount: response['playersCount'],
+        songsPerPlayer: response['songsPerPlayer'],
+        songs: [],
+        createdAt: response['createdAt'],
+        updatedAt: response['updatedAt'],
+      );
     } catch (err) {
       throw Exception(err);
     }
