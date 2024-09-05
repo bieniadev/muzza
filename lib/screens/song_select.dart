@@ -191,6 +191,7 @@ class _SongSelectScreenState extends ConsumerState<SongSelectScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text('Wszystkie piosenki wybrane!'),
+                    const SizedBox(height: 20),
                     GestureDetector(
                       onTap: startGame,
                       child: Container(
